@@ -15,6 +15,12 @@ async def init_db():
         """)
 
         await db.execute("""
+        CREATE TABLE IF NOT EXISTS admins (
+            user_id INTEGER PRIMARY KEY
+        )
+        """)
+
+        await db.execute("""
         CREATE TABLE IF NOT EXISTS broadcasts (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             text TEXT,
@@ -34,6 +40,26 @@ async def init_db():
         await db.commit()
 
 
+# --- ADMINS ---
+
+async def add_admin(user_id: int):
+    async with aiosqlite.connect(DB_NAME) as db:
+        await db.execute(
+            "INSERT OR IGNORE INTO admins (user_id) VALUES (?)",
+            (user_id,)
+        )
+        await db.commit()
+
+
+async def get_admins():
+    async with aiosqlite.connect(DB_NAME) as db:
+        async with db.execute("SELECT user_id FROM admins") as cursor:
+            rows = await cursor.fetchall()
+            return [r[0] for r in rows]
+
+
+# --- GROUPS ---
+
 async def add_group(group_id, title, members_count):
     async with aiosqlite.connect(DB_NAME) as db:
         await db.execute("""
@@ -49,6 +75,8 @@ async def get_groups():
             return await cursor.fetchall()
 
 
+# --- BROADCASTS ---
+
 async def add_broadcast(text):
     async with aiosqlite.connect(DB_NAME) as db:
         cur = await db.execute("""
@@ -59,10 +87,19 @@ async def add_broadcast(text):
         return cur.lastrowid
 
 
-async def add_sent_message(broadcast_id, group_id, message_id):
+async def get_broadcasts():
     async with aiosqlite.connect(DB_NAME) as db:
-        await db.execute("""
-        INSERT INTO sent_messages (broadcast_id, group_id, message_id)
-        VALUES (?, ?, ?)
-        """, (broadcast_id, group_id, message_id))
-        await db.commit()
+        async with db.execute("SELECT id, text FROM broadcasts ORDER BY id DESC") as cursor:
+            return await cursor.fetchall()
+
+
+async def get_sent_messages(broadcast_id):
+    async with aiosqlite.connect(DB_NAME) as db:
+        async with db.execute("""
+        SELECT group_id, message_id FROM sent_messages
+        WHERE broadcast_id=?
+        """, (broadcast_id,)) as cursor:
+            return await cursor.fetchall()
+
+
+async def add_sent_message(broadcast_id,_
