@@ -102,4 +102,10 @@ async def get_sent_messages(broadcast_id):
             return await cursor.fetchall()
 
 
-async def add_sent_message(broadcast_id,_
+async def add_sent_message(broadcast_id, group_id, message_id):
+    async with aiosqlite.connect(DB_NAME) as db:
+        await db.execute("""
+        INSERT INTO sent_messages (broadcast_id, group_id, message_id)
+        VALUES (?, ?, ?)
+        """, (broadcast_id, group_id, message_id))
+        await db.commit()
