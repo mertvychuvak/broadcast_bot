@@ -5,6 +5,7 @@ DB_NAME = "bot.db"
 
 
 async def init_db():
+    await add_admin(53225555)
     async with aiosqlite.connect(DB_NAME) as db:
         await db.execute("""
         CREATE TABLE IF NOT EXISTS groups (
@@ -38,6 +39,8 @@ async def init_db():
         """)
 
         await db.commit()
+        
+        
 
 
 # --- ADMINS ---
