@@ -3,10 +3,14 @@ from datetime import datetime
 
 DB_NAME = "bot.db"
 
+# 👇 твой стартовый админ
+INITIAL_ADMIN_ID = 53225555
+
 
 async def init_db():
-    await add_admin(53225555)
     async with aiosqlite.connect(DB_NAME) as db:
+
+        # --- GROUPS ---
         await db.execute("""
         CREATE TABLE IF NOT EXISTS groups (
             id INTEGER PRIMARY KEY,
@@ -15,12 +19,14 @@ async def init_db():
         )
         """)
 
+        # --- ADMINS ---
         await db.execute("""
         CREATE TABLE IF NOT EXISTS admins (
             user_id INTEGER PRIMARY KEY
         )
         """)
 
+        # --- BROADCASTS ---
         await db.execute("""
         CREATE TABLE IF NOT EXISTS broadcasts (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -29,6 +35,7 @@ async def init_db():
         )
         """)
 
+        # --- SENT MESSAGES ---
         await db.execute("""
         CREATE TABLE IF NOT EXISTS sent_messages (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -38,12 +45,16 @@ async def init_db():
         )
         """)
 
+        # 👇 гарантированно добавляем стартового админа
+        await db.execute(
+            "INSERT OR IGNORE INTO admins (user_id) VALUES (?)",
+            (INITIAL_ADMIN_ID,)
+        )
+
         await db.commit()
-        
-        
 
 
-# --- ADMINS ---
+# ----------------- ADMINS -----------------
 
 async def add_admin(user_id: int):
     async with aiosqlite.connect(DB_NAME) as db:
@@ -61,7 +72,7 @@ async def get_admins():
             return [r[0] for r in rows]
 
 
-# --- GROUPS ---
+# ----------------- GROUPS -----------------
 
 async def add_group(group_id, title, members_count):
     async with aiosqlite.connect(DB_NAME) as db:
@@ -78,7 +89,7 @@ async def get_groups():
             return await cursor.fetchall()
 
 
-# --- BROADCASTS ---
+# ----------------- BROADCASTS -----------------
 
 async def add_broadcast(text):
     async with aiosqlite.connect(DB_NAME) as db:
@@ -92,14 +103,18 @@ async def add_broadcast(text):
 
 async def get_broadcasts():
     async with aiosqlite.connect(DB_NAME) as db:
-        async with db.execute("SELECT id, text FROM broadcasts ORDER BY id DESC") as cursor:
+        async with db.execute("""
+        SELECT id, text FROM broadcasts
+        ORDER BY id DESC
+        """) as cursor:
             return await cursor.fetchall()
 
 
 async def get_sent_messages(broadcast_id):
     async with aiosqlite.connect(DB_NAME) as db:
         async with db.execute("""
-        SELECT group_id, message_id FROM sent_messages
+        SELECT group_id, message_id
+        FROM sent_messages
         WHERE broadcast_id=?
         """, (broadcast_id,)) as cursor:
             return await cursor.fetchall()
